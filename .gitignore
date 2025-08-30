@@ -1,0 +1,7 @@
+# Ignore environment files with real credentials
+.env
+
+# Ignore local runtime data
+gluetun/
+qbittorrent/
+downloads/
