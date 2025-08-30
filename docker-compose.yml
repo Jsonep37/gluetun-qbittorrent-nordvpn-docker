@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "${GLUETUN_WEBUI_PORT:-30024}:30024"   # WebUI port
+      - "${TORRENT_TCP_PORT:-6881}:6881/tcp"   # Torrent TCP
+      - "${TORRENT_UDP_PORT:-6881}:6881/udp"   # Torrent UDP
+    environment:
+      VPN_SERVICE_PROVIDER: "${VPN_SERVICE_PROVIDER:-nordvpn}"
+      OPENVPN_USER: "${OPENVPN_USER}"
+      OPENVPN_PASSWORD: "${OPENVPN_PASSWORD}"
+      TZ: "${TZ:-UTC}"
+      FIREWALL_VPN_INPUT_ALLOW: "${LAN_CIDR:-192.168.0.0/24}"
+      FIREWALL_OUTBOUND_SUBNET: "${FIREWALL_OUTBOUND_SUBNET:-0.0.0.0/0}"
+      VPN_WAIT: "on"
+      VPN_WAIT_TIME: "60s"
+    volumes:
+      - ./config/gluetun:/gluetun
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      TZ: "${TZ:-UTC}"
+      WEBUI_PORT: "${GLUETUN_WEBUI_PORT:-30024}"
+      TORRENTING_PORT: "${TORRENT_TCP_PORT:-6881}"
+    network_mode: "service:gluetun"   # shares Gluetun network
+    volumes:
+      - ./config/qbittorrent:/config
+      - ./downloads:/downloads
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
